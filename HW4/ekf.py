@@ -83,6 +83,10 @@ class Ekf(object):
         ########## Code starts here ##########
         # TODO: Update self.x, self.Sigma.
 
+        S = H@self.Sigma@H.T + Q
+        K = self.Sigma@H.T@np.linalg.inv(S)
+        self.x = self.x + K@z
+        self.Sigma = self.Sigma - K@S@K.T
 
         ########## Code ends here ##########
 
@@ -157,6 +161,9 @@ class EkfLocalization(Ekf):
         # HINT: The scipy.linalg.block_diag() function may be useful.
         # HINT: A list can be unpacked using the * (splat) operator. 
 
+        z = np.vstack(v_list)
+        Q = scipy.linalg.block_diag(*Q_list)
+        H = np.vstack(H_list)
 
         ########## Code ends here ##########
 
@@ -205,7 +212,33 @@ class EkfLocalization(Ekf):
         #       find the closest predicted line and the corresponding minimum Mahalanobis distance
         #       if the minimum distance satisfies the gating criteria, add corresponding entries to v_list, Q_list, H_list
 
+        I = z_raw.shape[1]
+        J = hs.shape[1]
+        V = np.zeros((I,J,2))
+        z_matrix = V + np.expand_dims(z_raw.T, 1)
+        hs_matrix = V + np.expand_dims(hs.T, 0)
 
+        V[:,:,0] = z_matrix[:,:,0] - hs_matrix[:,:,0]
+        V[:,:,1] = angle_diff(z_matrix[:,:,1], hs_matrix[:,:,1])
+
+        v_list = []
+        Q_list = []
+        H_list = []
+
+        for i in range(I):
+            d = []
+            Q = Q_raw[i]
+            for j in range(J):
+                v = V[i,j,:]
+                H = Hs[j]
+                S = H@self.Sigma@H.T + Q
+                d.append(v@np.linalg.inv(S)@v.T)
+            d_min = min(d)
+            if d_min < self.g**2:
+                index = d.index(d_min)
+                v_list.append(V[i,index,:])
+                Q_list.append(Q_raw[i])
+                H_list.append(Hs[index])
         ########## Code ends here ##########
 
         return v_list, Q_list, H_list
