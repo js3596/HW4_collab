@@ -84,7 +84,6 @@ class Ekf(object):
         # TODO: Update self.x, self.Sigma.
         S = H@self.Sigma@H.T + Q
         K = self.Sigma@H.T@np.linalg.inv(S)
-        #import pdb; pdb.set_trace()
         self.x = self.x + K@z
         self.Sigma = self.Sigma - K@S@K.T
 
@@ -218,10 +217,9 @@ class EkfLocalization(Ekf):
         z_matrix = V + np.expand_dims(z_raw.T, 1)
         hs_matrix = V + np.expand_dims(hs.T, 0)
 
-        V[:,:,0] = z_matrix[:,:,0] - hs_matrix[:,:,0]
-        V[:,:,1] = angle_diff(z_matrix[:,:,1], hs_matrix[:,:,1])
+        V[:,:,1] = z_matrix[:,:,1] - hs_matrix[:,:,1]
+        V[:,:,0] = angle_diff(z_matrix[:,:,0], hs_matrix[:,:,0])
         
-        #print('V:', V[-1,:,:])
         v_list = []
         Q_list = []
         H_list = []
@@ -235,7 +233,6 @@ class EkfLocalization(Ekf):
                 S = H@self.Sigma@H.T + Q
                 d.append(v@np.linalg.inv(S)@v.T)
             d_min = min(d)
-            #print(d)
             if d_min < self.g**2:
                 index = d.index(d_min)
                 v_list.append(V[i,index,:])
