@@ -87,13 +87,55 @@ def transform_line_to_scanner_frame(line, x, tf_base_to_camera, compute_jacobian
     # HINT: To find Hx, write h in terms of the pose of the base in world frame (x_base, y_base, th_base)
 
 
+    cos = np.cos; sin = np.sin; arctan2 = np.arctan2; norm = np.linalg.norm;
+    def vec_to_angle(vec):
+        ang = arctan2(vec[1],vec[0])
+        theta = arctan2(vec[1],vec[0])
+        if theta<0: theta += 2*np.pi
+        return theta
+
+    # coord tf from world to body 
+    x_bw = x[0]; y_bw = x[1];
+    th_bw = x[2]
+    # coord tf from body to cam
+    x_cb = tf_base_to_camera[0]
+    y_cb = tf_base_to_camera[1]
+    th_cb = tf_base_to_camera[2]
+
+    R = lambda theta: np.array([[cos(theta),sin(theta)],[-sin(theta),cos(theta)]] )
+
+    #world_to_base = lambda vec_w : R(th_bw) @ (vec_w-x[:2] )
+    base_to_world = lambda vec_b : R(th_bw).T@vec_b + x[:2]
+    #base_to_cam = lambda vec_b : R(th_cb) @ (vec_b-tf_base_to_camera[:2] )
+    
+    #angles are only transformed by rotation
+    alpha_c = alpha-th_bw-th_cb
+    # see fig
+    r_c = r -( base_to_world([x_cb,y_cb]).dot([cos(alpha),sin(alpha)]) )
+    #r_c_old = r -cos(alpha)*( cos(th_bw)*x_cb - sin(th_bw)*y_cb + x_bw) \
+    #        -sin(alpha)*( sin(th_bw)*x_cb + cos(th_bw)*y_cb + y_bw);
+
+    h = np.array([alpha_c,r_c])
+
+    # derivatives wrt frame
+    if compute_jacobian:
+        da_cdx_bw = 0
+        da_cdy_bw = 0
+        da_cdth_bw = -1
+
+        dr_cdx_bw = -cos(alpha)
+        dr_cdy_bw = -sin(alpha)
+        dr_cdth_bw = cos(alpha)*sin(th_bw)*x_cb + cos(alpha)*cos(th_bw)*y_cb \
+                    -sin(alpha)*cos(th_bw)*x_cb + sin(alpha)*sin(th_bw)*y_cb;
+        Hx = np.array([ [da_cdx_bw, da_cdy_bw, da_cdth_bw,],
+                        [dr_cdx_bw, dr_cdy_bw, dr_cdth_bw,] ])
+
     ########## Code ends here ##########
 
     if not compute_jacobian:
         return h
 
     return h, Hx
-
 
 def normalize_line_parameters(h, Hx=None):
     """
