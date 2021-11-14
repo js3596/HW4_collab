@@ -84,7 +84,7 @@ class Ekf(object):
         # TODO: Update self.x, self.Sigma.
         S = H@self.Sigma@H.T + Q
         K = self.Sigma@H.T@np.linalg.inv(S)
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         self.x = self.x + K@z
         self.Sigma = self.Sigma - K@S@K.T
 
@@ -161,7 +161,7 @@ class EkfLocalization(Ekf):
         # HINT: The scipy.linalg.block_diag() function may be useful.
         # HINT: A list can be unpacked using the * (splat) operator. 
 
-        z = np.vstack(v_list)
+        z = np.hstack(v_list).T
         Q = scipy.linalg.block_diag(*Q_list)
         H = np.vstack(H_list)
 
@@ -220,7 +220,8 @@ class EkfLocalization(Ekf):
 
         V[:,:,0] = z_matrix[:,:,0] - hs_matrix[:,:,0]
         V[:,:,1] = angle_diff(z_matrix[:,:,1], hs_matrix[:,:,1])
-
+        
+        #print('V:', V[-1,:,:])
         v_list = []
         Q_list = []
         H_list = []
@@ -234,6 +235,7 @@ class EkfLocalization(Ekf):
                 S = H@self.Sigma@H.T + Q
                 d.append(v@np.linalg.inv(S)@v.T)
             d_min = min(d)
+            #print(d)
             if d_min < self.g**2:
                 index = d.index(d_min)
                 v_list.append(V[i,index,:])
