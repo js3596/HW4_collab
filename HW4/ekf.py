@@ -306,7 +306,7 @@ class EkfSlam(Ekf):
         # TODO: Compute g, Gx, Gu.
         # HINT: This should be very similar to EkfLocalization.transition_model() and take 1-5 lines of code.
         # HINT: Call tb.compute_dynamics() with the correct elements of self.x
-
+        g, Gx, Gu = tb.compute_dynamics(self.x[0:3], u, dt)
 
         ########## Code ends here ##########
 
@@ -334,6 +334,9 @@ class EkfSlam(Ekf):
         # TODO: Compute z, Q, H.
         # Hint: Should be identical to EkfLocalization.measurement_model().
 
+        z = np.hstack(v_list).T
+        Q = scipy.linalg.block_diag(*Q_list)
+        H = np.vstack(H_list)
 
         ########## Code ends here ##########
 
@@ -363,7 +366,33 @@ class EkfSlam(Ekf):
         # TODO: Compute v_list, Q_list, H_list.
         # HINT: Should be almost identical to EkfLocalization.compute_innovations(). What is J now?
         # HINT: Instead of getting world-frame line parameters from self.map_lines, you must extract them from the state self.x.
+        I = z_raw.shape[1]
+        J = hs.shape[1]
+        V = np.zeros((I, J, 2))
+        z_matrix = V + np.expand_dims(z_raw.T, 1)
+        hs_matrix = V + np.expand_dims(hs.T, 0)
 
+        V[:, :, 1] = z_matrix[:, :, 1] - hs_matrix[:, :, 1]
+        V[:, :, 0] = angle_diff(z_matrix[:, :, 0], hs_matrix[:, :, 0])
+
+        v_list = []
+        Q_list = []
+        H_list = []
+
+        for i in range(I):
+            d = []
+            Q = Q_raw[i]
+            for j in range(J):
+                v = V[i, j, :]
+                H = Hs[j]
+                S = H @ self.Sigma @ H.T + Q
+                d.append(v @ np.linalg.inv(S) @ v.T)
+            d_min = min(d)
+            if d_min < self.g ** 2:
+                index = d.index(d_min)
+                v_list.append(V[i, index, :])
+                Q_list.append(Q_raw[i])
+                H_list.append(Hs[index])
 
         ########## Code ends here ##########
 
@@ -388,12 +417,20 @@ class EkfSlam(Ekf):
             # HINT: The first 3 columns of Hx should be populated using the same approach as in EkfLocalization.compute_predicted_measurements().
             # HINT: The first two map lines (j=0,1) are fixed so the Jacobian of h wrt the alpha and r for those lines is just 0. 
             # HINT: For the other map lines (j>2), write out h in terms of alpha and r to get the Jacobian Hx.
-
+            h, Hx[:,0:3] = tb.transform_line_to_scanner_frame([alpha, r], self.x[0:3], self.tf_base_to_camera)
 
             # First two map lines are assumed fixed so we don't want to propagate
             # any measurement correction to them.
             if j >= 2:
                 Hx[:,idx_j:idx_j+2] = np.eye(2)  # FIX ME!
+
+                x_cb = self.tf_base_to_camera[0]
+                y_cb = self.tf_base_to_camera[1]
+                x = self.x[0]
+                y = self.x[1]
+                theta = self.x[2]
+
+                Hx[1, idx_j] = (x + x_cb*np.cos(theta) - y_cb*np.sin(theta))*np.sin(alpha) - (y + x_cb*np.sin(theta) - y_cb*np.cos(theta))*np.cos(alpha)
             ########## Code ends here ##########
 
             h, Hx = tb.normalize_line_parameters(h, Hx)
