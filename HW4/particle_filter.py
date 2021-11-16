@@ -313,7 +313,52 @@ class MonteCarloLocalization(ParticleFilter):
         # Hint: For the faster solution, you might find np.expand_dims(), 
         #       np.linalg.solve(), np.meshgrid() useful.
 
+        # compute hs matrix [M,2,J]
+        hs = self.compute_predicted_measurements()
 
+        # dimension constants
+        m = self.M
+        i = len(z_raw[0])
+        j = len(hs[0][0])
+
+        # calculate vij_a and vij_r [M,I,J]
+        hs_a = hs[:,0,:] #[M,J]
+        hs_a_calc = np.reshape(np.repeat(hs_a,i,axis=0),(m,i,j)) #[M,I,J]
+        hs_r = hs[:,1,:] #[M,J]
+        hs_r_calc = np.reshape(np.repeat(hs_r,i,axis=0),(m,i,j)) #[M,I,J]
+        z_a = z_raw[0] #[1,I]
+        z_a_calc = np.reshape(np.repeat(np.tile(z_a,(m,1)),j),(m,i,j)) #[M,I,J]
+        z_r = z_raw[1] #[1,I]
+        z_r_calc = np.reshape(np.repeat(np.tile(z_r,(m,1)),j),(m,i,j)) #[M,I,J]
+        # vij_r [M,I,J]
+        vij_r = z_r_calc-hs_r_calc
+        # vij_a [M,I,J]
+        vij_a = angle_diff(z_a_calc,hs_a_calc)
+
+        # get Q_new [2,2,M,I,J]
+        Q_i_0_0 = Q_raw[:,0,0]
+        Q_i_0_1 = Q_raw[:,0,1]
+        Q_i_1_0 = Q_raw[:,1,0]
+        Q_i_1_1 = Q_raw[:,1,1]
+        Q_new = np.zeros((2,2,m,i,j))
+        Q_new[0,0] = np.reshape(np.repeat(np.tile(Q_i_0_0,(m,1)),j),(m,i,j))
+        Q_new[0,1] = np.reshape(np.repeat(np.tile(Q_i_0_1,(m,1)),j),(m,i,j))
+        Q_new[1,0] = np.reshape(np.repeat(np.tile(Q_i_1_0,(m,1)),j),(m,i,j))
+        Q_new[1,1] = np.reshape(np.repeat(np.tile(Q_i_1_1,(m,1)),j),(m,i,j))
+
+
+        # calculate dij [M,I,J]
+        v_tot = np.array([vij_a,vij_r])
+        dij = v_tot.T @ np.linalg.inv(Q_new) @ v_tot
+        min_d = np.where(dij[:,:,]==min(dij[:,:,]))
+        idx_M = min_d[0]
+        idx_I = min_d[1]
+        idx_J = min_d[2]
+
+        # calculate vs [M,I,2]
+        vs = np.zeros((m,i,2))
+        vs[:,:,0] = vij_a[idx_M,idx_I,idx_J]
+        vs[:,:,1] = vij_r[idx_M,idx_I,idx_J]
         ########## Code ends here ##########
 
         # Reshape [M x I x 2] array to [M x 2I]
