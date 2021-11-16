@@ -344,23 +344,21 @@ class MonteCarloLocalization(ParticleFilter):
         #       or tb.normalize_line_parameters(), but reimplement these steps vectorized.
         
         # empty hs [M,2,J]
-        hs = np.zeros((self.M,2,len(self.map_lines[0])))
+        j = len(self.map_lines[0])
+        hs = np.zeros((self.M,2,j))
 
         # all a and r [1, J]
-        a = self.map_lines[0]
-        r = self.map_lines[1]
+        a0 = self.map_lines[0]
+        r0 = self.map_lines[1]
+        
+        # make a and r into [M,J]
+        a = np.tile(a0,(self.M,1))
+        r = np.tile(r0,(self.M,1))
 
-        # normalize a and r [1,J]
-        less_r = r<0
-        less_r_idx = np.where(less_r)[0]
-        r[less_r_idx] *= -1
-        a[less_r_idx] += np.pi
-        a = (a+np.pi)%(2*np.pi)-np.pi
-
-        # coordinate transform from world to body [M,1]
-        x_wb = np.reshape(self.xs[:,0],(self.M,1))
-        y_wb = np.reshape(self.xs[:,1],(self.M,1))
-        th_wb = np.reshape(self.xs[:,2],(self.M,1))
+        # coordinate transform from world to body [1,M]
+        x_wb = self.xs[:,0]
+        y_wb = self.xs[:,1]
+        th_wb = self.xs[:,2]
 
         # coordinate transform from body to camera [1,]
         x_bc = self.tf_base_to_camera[0]
@@ -369,18 +367,26 @@ class MonteCarloLocalization(ParticleFilter):
 
         # R [M,2,2]
         R = np.zeros((self.M,2,2))
-        R[:,0,0] = np.cos(th_wb[:,0])
-        R[:,0,1] = np.sin(th_wb[:,0])
-        R[:,1,0] = -np.sin(th_wb[:,0])
-        R[:,1,1] = np.cos(th_wb[:,0])
+        R[:,0,0] = np.cos(th_wb)
+        R[:,0,1] = np.sin(th_wb)
+        R[:,1,0] = -np.sin(th_wb)
+        R[:,1,1] = np.cos(th_wb)
 
         # compute hs
-        # r>=0 cases
-        print("length of hs[:,0,:]: ", len(hs[:,0,:]))
-        print("length of a: ",len(a))
-        hs[:,0,:] = a-np.repeat(th_wb[:,0],len(a))-np.repeat(th_bc,len(a)) # a
-        hs[:,1,:] = r-(x_wb[:,0]+x_bc*R[:,0,0]+y_bc*R[:,1,0])*np.cos(a)- \
-                    (y_wb[:,0]+x_bc*R[:,0,1]+y_bc*R[:,1,1])*np.sin(a) # r
+        hs[:,0,:] = a-np.tile(th_wb,(j,1)).T-th_bc # a
+        term_cos = np.tile(x_wb+x_bc*R[:,0,0]+y_bc*R[:,1,0],(j,1)).T
+        term_sin = np.tile(y_wb+x_bc*R[:,0,1]+y_bc*R[:,1,1],(j,1)).T
+        hs[:,1,:] = r-term_cos*np.cos(a)-term_sin*np.sin(a) # r
+
+        # normalization
+        r_less_idx = np.where(hs[:,1,:]<0)
+        idx_M = r_less_idx[0]
+        idx_J = r_less_idx[1]
+        hs[idx_M,1,idx_J] *= -1
+        hs[idx_M,0,idx_J] += np.pi
+        hs[:,0,:] = (hs[:,0,:]+np.pi)%(2*np.pi)-np.pi
+        
+                  
         
         ########## Code ends here ##########
 
