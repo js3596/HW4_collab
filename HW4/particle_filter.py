@@ -376,6 +376,8 @@ class MonteCarloLocalization(ParticleFilter):
 
         # compute hs
         # r>=0 cases
+        print("length of hs[:,0,:]: ", len(hs[:,0,:]))
+        print("length of a: ",len(a))
         hs[:,0,:] = a-np.repeat(th_wb[:,0],len(a))-np.repeat(th_bc,len(a)) # a
         hs[:,1,:] = r-(x_wb[:,0]+x_bc*R[:,0,0]+y_bc*R[:,1,0])*np.cos(a)- \
                     (y_wb[:,0]+x_bc*R[:,0,1]+y_bc*R[:,1,1])*np.sin(a) # r
