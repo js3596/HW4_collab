@@ -342,8 +342,44 @@ class MonteCarloLocalization(ParticleFilter):
         #       results in a ~10x speedup.
         # Hint: For the faster solution, it does not call tb.transform_line_to_scanner_frame()
         #       or tb.normalize_line_parameters(), but reimplement these steps vectorized.
+        
+        # empty hs [M,2,J]
+        hs = np.zeros((self.M,2,len(self.map_lines[0])))
 
+        # all a and r [1, J]
+        a = self.map_lines[0]
+        r = self.map_lines[1]
 
+        # normalize a and r [1,J]
+        less_r = r<0
+        less_r_idx = np.where(less_r)[0]
+        r[less_r_idx] *= -1
+        a[less_r_idx] += np.pi
+        a = (a+np.pi)%(2*np.pi)-np.pi
+
+        # coordinate transform from world to body [M,1]
+        x_wb = np.reshape(self.xs[:,0],(self.M,1))
+        y_wb = np.reshape(self.xs[:,1],(self.M,1))
+        th_wb = np.reshape(self.xs[:,2],(self.M,1))
+
+        # coordinate transform from body to camera [1,]
+        x_bc = self.tf_base_to_camera[0]
+        y_bc = self.tf_base_to_camera[1]
+        th_bc = self.tf_base_to_camera[2]
+
+        # R [M,2,2]
+        R = np.zeros((self.M,2,2))
+        R[:,0,0] = np.cos(th_wb[:,0])
+        R[:,0,1] = np.sin(th_wb[:,0])
+        R[:,1,0] = -np.sin(th_wb[:,0])
+        R[:,1,1] = np.cos(th_wb[:,0])
+
+        # compute hs
+        # r>=0 cases
+        hs[:,0,:] = a-np.repeat(th_wb[:,0],len(a))-np.repeat(th_bc,len(a)) # a
+        hs[:,1,:] = r-(x_wb[:,0]+x_bc*R[:,0,0]+y_bc*R[:,1,0])*np.cos(a)- \
+                    (y_wb[:,0]+x_bc*R[:,0,1]+y_bc*R[:,1,1])*np.sin(a) # r
+        
         ########## Code ends here ##########
 
         return hs
