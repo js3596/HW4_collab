@@ -59,9 +59,10 @@ class ParticleFilter(object):
         # TODO: Update self.xs.
         # Hint: Call self.transition_model().
         # Hint: You may find np.random.multivariate_normal useful.
-        u_len = len(u)
-        mean = [np.mean(u[:,0]),np.mean(u[:,1])]
-        new_u = np.random.multivariate_normal(mean,self.R,u_len)
+        #u_len = len(u)
+        #mean = [np.mean(u[:,0]),np.mean(u[:,1])]
+        #new_u = np.random.multivariate_normal(mean,self.R,u_len)
+        new_u = np.random.multivariate_normal(u,self.R,self.M)
         self.xs = self.transition_model(new_u,dt)
         '''
         g = self.transition_model(u,dt)
