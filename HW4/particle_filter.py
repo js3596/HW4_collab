@@ -59,7 +59,13 @@ class ParticleFilter(object):
         # TODO: Update self.xs.
         # Hint: Call self.transition_model().
         # Hint: You may find np.random.multivariate_normal useful.
+        g = self.transition_model(u,dt)
+        x_x = g[:,0]
+        x_y = g[:,1]
+        x_th = g[:,2]
+        mean = [np.mean(x_x),np.mean(x_y),np.mean(x_th)]
 
+        self.xs = np.random.multivariate_normal(mean,self.R,self.M)
 
         ########## Code ends here ##########
 
@@ -182,7 +188,35 @@ class MonteCarloLocalization(ParticleFilter):
         #       where abs(om) > EPSILON_OMEGA and the other idxs, then do separate 
         #       updates for them
 
+        # empty g
+        g = np.zeros((self.M,3))
 
+        # find idx of abs(om)<epsilon_omega and abs(om)<epsilon_omega
+        om_ls = np.array(us[:,1])
+        less_om_ls = abs(om_ls)<=EPSILON_OMEGA
+        great_om_ls = abs(om_ls)>EPSILON_OMEGA
+        less_idx = np.where(less_om_ls)[0]
+        great_idx = np.where(great_om_ls)[0]
+
+        # calculate g abs(om)<epsilon_omega
+        us_less_v = us[less_idx,0]
+        x_less_x = self.xs[less_idx,0]
+        x_less_y = self.xs[less_idx,1]
+        x_less_th = self.xs[less_idx,2]
+        g[less_idx,0] = x_less_x+us_less_v*np.cos(x_less_th)*dt #x_t
+        g[less_idx,1] = x_less_y+us_less_v*np.sin(x_less_th)*dt #y_t
+
+        # calculate g abs(om)>epsilon_omega
+        us_great_v = us[great_idx,0]
+        us_great_om = us[great_idx,1]
+        x_great_x = self.xs[great_idx,0]
+        x_great_y = self.xs[great_idx,1]
+        x_great_th = self.xs[great_idx,2]
+        g[great_idx,0] = x_great_x+us_great_v/us_great_om*(np.sin(x_great_th+us_great_om*dt)-np.sin(x_great_th)) #x_t
+        g[great_idx,1] = x_great_y-us_great_v/us_great_om*(np.cos(x_great_th+us_great_om*dt)-np.cos(x_great_th)) #y_t
+
+        # th_t
+        g[:,2] = self.xs[:,2]+us[:,1]*dt
         ########## Code ends here ##########
 
         return g
