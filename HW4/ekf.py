@@ -224,6 +224,19 @@ class EkfLocalization(Ekf):
         Q_list = []
         H_list = []
 
+        H_T = np.hstack(Hs).T
+        S = np.reshape(np.vstack(np.tile(scipy.linalg.block_diag(*Hs @ self.Sigma) @ H_T,(I,1,1))) + np.vstack(np.tile(Q_raw,(1,J,1))),(I*J,2,-1))
+        d = scipy.linalg.block_diag(*np.vstack(V))@scipy.linalg.block_diag(*np.linalg.inv(S))@np.hstack(np.reshape(np.vstack(V),(I*J,1,-1))).T
+        d = np.reshape(d,(I,J))
+        min_idx = np.argmin(d,1)
+        min_d = np.amin(d,1)
+        v_list = V[list(range(I)),min_idx,:]
+        H_list = np.array(Hs)[min_idx]
+        good_idx = np.where(min_d < self.g**2)[0]
+        v_list = v_list[good_idx].tolist()
+        H_list = H_list[good_idx].tolist()
+        Q_list = Q_raw[good_idx].tolist()
+        '''
         for i in range(I):
             d = []
             Q = Q_raw[i]
@@ -238,6 +251,7 @@ class EkfLocalization(Ekf):
                 v_list.append(V[i,index,:])
                 Q_list.append(Q_raw[i])
                 H_list.append(Hs[index])
+        '''
         ########## Code ends here ##########
 
         return v_list, Q_list, H_list
