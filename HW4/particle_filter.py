@@ -335,7 +335,10 @@ class MonteCarloLocalization(ParticleFilter):
         # vij_a [M,I,J]
         vij_a = angle_diff(z_a_calc,hs_a_calc)
 
-        # get Q_new [2,2,M,I,J]
+        # get Q_new [M,I,J,2,2]
+        q1 = np.reshape(np.tile(Q_raw,(j,1)),(i,j,2,2))
+        Q_new = q1*m
+        '''
         Q_i_0_0 = Q_raw[:,0,0]
         Q_i_0_1 = Q_raw[:,0,1]
         Q_i_1_0 = Q_raw[:,1,0]
@@ -345,10 +348,13 @@ class MonteCarloLocalization(ParticleFilter):
         Q_new[0,1] = np.reshape(np.repeat(np.tile(Q_i_0_1,(m,1)),j),(m,i,j))
         Q_new[1,0] = np.reshape(np.repeat(np.tile(Q_i_1_0,(m,1)),j),(m,i,j))
         Q_new[1,1] = np.reshape(np.repeat(np.tile(Q_i_1_1,(m,1)),j),(m,i,j))
+        '''
 
 
         # calculate dij [M,I,J]
-        v_tot = np.array([vij_a,vij_r])
+        v_tot = np.zeros((m,i,j,2)) # [M,I,J,2]
+        v_tot[:,:,:,0] = vij_a
+        v_tot[:,:,:,1] = vij_r
         dij = v_tot.T @ np.linalg.inv(Q_new) @ v_tot
         min_d = np.where(dij[:,:,]==min(dij[:,:,]))
         idx_M = min_d[0]
