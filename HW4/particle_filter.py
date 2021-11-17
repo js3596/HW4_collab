@@ -116,17 +116,13 @@ class ParticleFilter(object):
         # Hint: To maximize speed, try to implement the resampling algorithm
         #       without for loops. You may find np.linspace(), np.cumsum(), and
         #       np.searchsorted() useful. This results in a ~10x speedup.
-        c = ws[0]
-        i = 0
-        x = np.array([0,0,0])
-        for m in range(xs):
-            u = (r+m/self.M)*np.sum([ws[:m+1]])
-            while c<u:
-                i += 1
-                c += ws[i]
-            x = x+self.xs[i]
-            self.xs[m] += x
-            self.ws[m] += 1/self.M
+
+        m = np.linspace(0,self.M-1,num=self.M)
+        u = np.sum(ws)*(r+m/self.M)
+        ws_cumsum = np.cumsum(ws)
+        idx_ls = np.searchsorted(ws_cumsum,u)
+        self.xs = xs[idx_ls]
+        self.ws = ws[idx_ls]
 
         ########## Code ends here ##########
 
