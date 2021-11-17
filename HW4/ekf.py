@@ -430,7 +430,7 @@ class EkfSlam(Ekf):
                 y = self.x[1]
                 theta = self.x[2]
 
-                Hx[1, idx_j] = (x + x_cb*np.cos(theta) - y_cb*np.sin(theta))*np.sin(alpha) - (y + x_cb*np.sin(theta) - y_cb*np.cos(theta))*np.cos(alpha)
+                Hx[1, idx_j] = (x + x_cb*np.cos(theta) - y_cb*np.sin(theta))*np.sin(alpha) - (y + x_cb*np.sin(theta) + y_cb*np.cos(theta))*np.cos(alpha)
             ########## Code ends here ##########
 
             h, Hx = tb.normalize_line_parameters(h, Hx)
