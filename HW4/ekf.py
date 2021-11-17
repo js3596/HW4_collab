@@ -223,7 +223,7 @@ class EkfLocalization(Ekf):
         v_list = []
         Q_list = []
         H_list = []
-
+        
         H_T = np.hstack(Hs).T
         S = np.reshape(np.vstack(np.tile(scipy.linalg.block_diag(*Hs @ self.Sigma) @ H_T,(I,1,1))) + np.vstack(np.tile(Q_raw,(1,J,1))),(I*J,2,-1))
         d = scipy.linalg.block_diag(*np.vstack(V))@scipy.linalg.block_diag(*np.linalg.inv(S))@np.hstack(np.reshape(np.vstack(V),(I*J,1,-1))).T
