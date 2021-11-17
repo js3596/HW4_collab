@@ -116,7 +116,17 @@ class ParticleFilter(object):
         # Hint: To maximize speed, try to implement the resampling algorithm
         #       without for loops. You may find np.linspace(), np.cumsum(), and
         #       np.searchsorted() useful. This results in a ~10x speedup.
-
+        c = ws[0]
+        i = 0
+        x = np.array([0,0,0])
+        for m in range(xs):
+            u = (r+m/self.M)*np.sum([ws[:m+1]])
+            while c<u:
+                i += 1
+                c += ws[i]
+            x = x+self.xs[i]
+            self.xs[m] += x
+            self.ws[m] += 1/self.M
 
         ########## Code ends here ##########
 
@@ -239,7 +249,8 @@ class MonteCarloLocalization(ParticleFilter):
         #       particles. You may find scipy.stats.multivariate_normal.pdf()
         #       useful.
         # Hint: You'll need to call self.measurement_model()
-
+        vs, Q = self.measurement_model(z_raw,Q_raw)
+        ws = scipy.stats.multivariate_normal.pdf(vs,cov=Q)
 
         ########## Code ends here ##########
 
@@ -264,7 +275,7 @@ class MonteCarloLocalization(ParticleFilter):
         ########## Code starts here ##########
         # TODO: Compute Q.
         # Hint: You might find scipy.linalg.block_diag() useful
-
+        Q = scipy.linalg.block_diag(*Q_raw)
 
         ########## Code ends here ##########
 
