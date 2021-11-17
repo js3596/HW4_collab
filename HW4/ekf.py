@@ -235,7 +235,7 @@ class EkfLocalization(Ekf):
         good_idx = np.where(min_d < self.g**2)[0]
         v_list = v_list[good_idx].tolist()
         H_list = H_list[good_idx].tolist()
-        Q_list = Q_raw[good_idx].tolist()
+        Q_list = np.array(Q_raw)[good_idx].tolist()
         '''
         for i in range(I):
             d = []
