@@ -337,35 +337,28 @@ class MonteCarloLocalization(ParticleFilter):
 
         # get Q_new [M,I,J,2,2]
         q1 = np.reshape(np.tile(Q_raw,(j,1)),(i,j,2,2))
-        Q_new = q1*m
-        '''
-        Q_i_0_0 = Q_raw[:,0,0]
-        Q_i_0_1 = Q_raw[:,0,1]
-        Q_i_1_0 = Q_raw[:,1,0]
-        Q_i_1_1 = Q_raw[:,1,1]
-        Q_new = np.zeros((2,2,m,i,j))
-        Q_new[0,0] = np.reshape(np.repeat(np.tile(Q_i_0_0,(m,1)),j),(m,i,j))
-        Q_new[0,1] = np.reshape(np.repeat(np.tile(Q_i_0_1,(m,1)),j),(m,i,j))
-        Q_new[1,0] = np.reshape(np.repeat(np.tile(Q_i_1_0,(m,1)),j),(m,i,j))
-        Q_new[1,1] = np.reshape(np.repeat(np.tile(Q_i_1_1,(m,1)),j),(m,i,j))
-        '''
-
+        Q_new = np.array([q1]*m)
 
         # calculate dij [M,I,J]
-        v_tot = np.zeros((m,i,j,2)) # [M,I,J,2]
-        v_tot[:,:,:,0] = vij_a
-        v_tot[:,:,:,1] = vij_r
-        dij = v_tot.T @ np.linalg.inv(Q_new) @ v_tot
-        min_d = np.where(dij[:,:,]==min(dij[:,:,]))
-        idx_M = min_d[0]
-        idx_I = min_d[1]
-        idx_J = min_d[2]
-
+        Q_inv = np.linalg.inv(Q_new)
+        Q_inv_0 = Q_inv[:,:,:,0,0]
+        Q_inv_1 = Q_inv[:,:,:,0,1]
+        Q_inv_2 = Q_inv[:,:,:,1,0]
+        Q_inv_3 = Q_inv[:,:,:,1,1]
+        dij = (vij_a*Q_inv_0+vij_r*Q_inv_2)*vij_a+(vij_a*Q_inv_1+vij_r*Q_inv_3)*vij_r
+        
+        # find minimum
+        min_d = np.argmin(dij,axis=2)
+        idx_M = np.repeat(range(m),i)
+        idx_I = np.tile(range(i),m)
+        idx_J = np.reshape(min_d,m*i)
+        
         # calculate vs [M,I,2]
         vs = np.zeros((m,i,2))
-        vs[:,:,0] = vij_a[idx_M,idx_I,idx_J]
-        vs[:,:,1] = vij_r[idx_M,idx_I,idx_J]
+        vs[idx_M,idx_I,0] = vij_a[idx_M,idx_I,idx_J]
+        vs[idx_M,idx_I,1] = vij_r[idx_M,idx_I,idx_J]
         ########## Code ends here ##########
+
 
         # Reshape [M x I x 2] array to [M x 2I]
         return vs.reshape((self.M,-1))  # [M x 2I]
