@@ -236,6 +236,7 @@ class EkfLocalization(Ekf):
         H_list = H_list[good_idx].tolist()
         Q_list = np.array(Q_raw)[good_idx].tolist()
         '''
+        # Using loop
         v_list = []
         Q_list = []
         H_list = []
@@ -410,6 +411,7 @@ class EkfSlam(Ekf):
         H_list = H_list[good_idx].tolist()
         Q_list = np.array(Q_raw)[good_idx].tolist()
         '''
+        # Using loop
         v_list = []
         Q_list = []
         H_list = []
